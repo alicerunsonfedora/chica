@@ -128,7 +128,9 @@ public class Chica: ObservableObject, CustomStringConvertible {
             Chica.INSTANCE_DOMAIN = instanceDomain
 
             //  Now, we change the state of the oauth to .signInProgress
-            authState = .signinInProgress
+            DispatchQueue.main.async {
+                self.authState = .signinInProgress
+            }
 
             var client: Application? = nil
 
