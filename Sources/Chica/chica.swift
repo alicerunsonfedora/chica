@@ -23,9 +23,12 @@ import SwiftUI
 import Combine
 
 /**
-The primary client object that handles all fediverse requests. It basically works as the logic controller of all the networking done by the app.
+The primary client object that handles all fediverse requests. It basically works as the logic controller of
+ all the networking done by the app.
 
-All of the getter and setter methods work asynchronously thanks to the new concurrency model introduced in Swift 5.5. They have been written to provide helpful error messages and have a state that can be traced by the app. This model works best in scenarios where data needs to be loaded into a view.
+All of the getter and setter methods work asynchronously thanks to the new concurrency model introduced in
+ Swift 5.5. They have been written to provide helpful error messages and have a state that can be traced by
+ the app. This model works best in scenarios where data needs to be loaded into a view.
 
 - Version 2.0
 
@@ -40,6 +43,16 @@ public class Chica: ObservableObject, CustomStringConvertible {
 
     */
     public class OAuth: ObservableObject {
+
+        public struct RegisteredApplication {
+            public let name: String
+            public let website: String
+
+            public static let `default` = RegisteredApplication(
+                name: "Starlight",
+                website: "https://hyperspace.marquiskurt.net"
+            )
+        }
 
         /// An enum that allows us to know the state of the user authentication.
         public enum State: Equatable {
@@ -101,7 +114,11 @@ public class Chica: ObservableObject, CustomStringConvertible {
         /// - Parameter instanceDomain: The domain in which the instance lies to start authorization for.
         /// - Parameter authHandler: An optional closure that runs once the URL is created to open. Defaults to
         ///     nil, using `openURL` instead.
-        public func startOauthFlow(for instanceDomain: String, authHandler: ((URL) -> Void)? = nil) async {
+        public func startOauthFlow(
+            for instanceDomain: String,
+            registeredAs app: RegisteredApplication = .default,
+            authHandler: ((URL) -> Void)? = nil
+        ) async {
 
             //  First, we initialize the keychain object
             let keychain = Keychain(service: Chica.OAuth.keychainService)
@@ -119,10 +136,10 @@ public class Chica: ObservableObject, CustomStringConvertible {
                 //  We then do a POST request to create an application on the specified mastodon instance.
                 client = try await Chica.shared.request(.post, for: .apps, params:
                     [
-                        "client_name": "Starlight",
+                        "client_name": app.name,
                         "redirect_uris": "\(Chica.shared.urlPrefix)://\(URL_SUFFIX)",
                         "scopes": scopes.joined(separator: " "),
-                        "website": "https://hyperspace.marquiskurt.net"
+                        "website": app.website
                     ]
                 )
             } catch {
@@ -187,7 +204,17 @@ public class Chica: ObservableObject, CustomStringConvertible {
 
             //  And, finally, we change the state to use the token we just retrieved.
             self.authState = .authenthicated(authToken: token!.accessToken)
+        }
 
+        /// Removes the tokens in the keychain for this app, effectively signing a user out.
+        public func signOut() {
+            let keychain = Keychain(service: Chica.OAuth.keychainService)
+            do {
+                try keychain.removeAll()
+                self.authState = .signedOut
+            } catch {
+                print(error)
+            }
         }
 
     }
@@ -196,6 +223,8 @@ public class Chica: ObservableObject, CustomStringConvertible {
     public enum Method: String {
         case post = "POST"
         case get = "GET"
+        case put = "PUT"
+        case delete = "DELETE"
     }
 
     //  MARK: - PROPERTIES
@@ -237,18 +266,16 @@ public class Chica: ObservableObject, CustomStringConvertible {
 
         //  For the moment, we still need to use Combine and Publishers a bit, but this might change over time.
         oauthStateCancellable = OAuth.shared.$authState.sink { state in
-
             switch state {
             case .authenthicated(let oToken):
                 token = oToken
             default:
                 break
             }
-
         }
 
         let configuration = URLSessionConfiguration.default
-        var headers = ["User-Agent": "Starlight:v1.0 (by Starlight Development Team)."]
+        var headers = ["User-Agent": "ChicaApp:v1.0 (by Starlight Development Team)."]
         if let token = token {
             headers["Authorization"] = "Bearer \(token)"
         }
@@ -283,7 +310,6 @@ public class Chica: ObservableObject, CustomStringConvertible {
 
     /// Returns a URLRequest with the specified URL, http method, and query parameters.
     static private func makeRequest(_ method: Method, url: URL, params: [String: String]? = nil) -> URLRequest {
-
         var request: URLRequest
         var url = url
 
@@ -300,38 +326,63 @@ public class Chica: ObservableObject, CustomStringConvertible {
 
     }
 
-    public func request<T: Decodable>(_ method: Method, for endpoint: Endpoint, params: [String: String]? = nil) async throws -> T? {
-
+    public func request<T: Decodable>(
+        _ method: Method,
+        for endpoint: Endpoint,
+        params: [String: String]? = nil
+    ) async throws -> T? {
         var content: T? = nil
 
         let url = Self.API_URL.appendingPathComponent(endpoint.path)
         do {
-
             let (data, response) = try await self.session.data(for: Self.makeRequest(method, url: url, params: params))
 
-            guard (response as? HTTPURLResponse)?.statusCode == 200 else {
+            guard let response = response as? HTTPURLResponse, (200..<300).contains(response.statusCode) else {
                 throw FetchError.message(
                     reason: "Request returned with error code: \(String(describing: (response as? HTTPURLResponse)?.statusCode))",
                     data: data
                 )
             }
-
             do {
-
                 content = try JSONDecoder().decode(T.self, from: data)
-
             } catch {
-
                 throw FetchError.parseError(reason: error)
-
             }
-
         } catch {
             throw FetchError.unknownError(error: error)
         }
-
         return content
+    }
 
+    public func request<T: Decodable>(
+        _ method: Method,
+        for endpoint: Endpoint,
+        params: [String: String]? = nil
+    ) async -> Result<T, FetchError> {
+        let url = Self.API_URL.appendingPathComponent(endpoint.path)
+        do {
+            let (data, response) = try await self.session.data(for: Self.makeRequest(method, url: url, params: params))
+            guard let response = response as? HTTPURLResponse else {
+                return .failure(.unknownResponseError(response: response))
+            }
+
+            guard (200..<300).contains(response.statusCode) else {
+                return .failure(
+                    .message(
+                        reason: "Request returned with error code: \(String(describing: response.statusCode))",
+                        data: data
+                    )
+                )
+            }
+            do {
+                let content = try JSONDecoder().decode(T.self, from: data)
+                return .success(content)
+            } catch {
+                return .failure(.parseError(reason: error))
+            }
+        } catch {
+            return .failure(.unknownError(error: error))
+        }
     }
 
 }

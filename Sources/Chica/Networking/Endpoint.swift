@@ -121,6 +121,9 @@ public enum Endpoint {
 
     /// Search for matching accounts by username or display name.
     case search
+
+    /// Retrieves lists that the user has created.
+    case lists
     
     // MARK: - TIMELINES AND STATUSES
     // Methods pertaining to interacting with timelines.
@@ -142,29 +145,18 @@ public enum Endpoint {
 
     /// Like or favorite a status.
     /// - Note: This endpoint is spelled with the British spelling to maintain Mastodon API consistency.
-    case favourite(id: String)
+    case favourite(id: String), unfavorite(id: String)
 
-    /// Undo a like or favorite a status.
-    /// - Note: This endpoint is spelled with the British spelling to maintain Mastodon API consistency.
-    case unfavorite(id: String)
+    /// Reblog/unreblog a status.
+    case reblog(id: String), unreblog(id:String)
 
-    /// Reblog a status.
-    case reblog(id: String)
-
-    /// Undo a reblog of a status.
-    case unreblog(id:String)
-
-    /// Privately save a status to an account's bookmarks.
-    case save(id: String)
-
-    /// Remove a status from an account's bookmarks.
-    case undoSave(id: String)
+    /// Privately save or unsave a status to an account's bookmarks.
+    case save(id: String), undoSave(id: String)
 
     // MARK: - ENDPOINT MAPPING
 
     /// Full path
     var path: String {
-
         switch self {
         case .apps:
             return "/api/v1/apps"
@@ -217,6 +209,8 @@ public enum Endpoint {
             return "/api/v1/statuses/\(statusId)/bookmark"
         case .undoSave(let statusId):
             return "/api/v1/statuses/\(statusId)/unbookmark"
+        case .lists:
+            return "/api/v1/lists"
         default: return ""
         }
     }

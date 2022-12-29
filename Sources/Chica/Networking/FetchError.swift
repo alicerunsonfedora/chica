@@ -11,9 +11,9 @@ import Foundation
 ///
 /// Inspired in NetworkError by **Thomas Ricouard** in https://github.com/Dimillian/RedditOS
 public enum FetchError: Error {
-
     case unknown(data: Data)
     case unknownError(error: Error)
+    case unknownResponseError(response: URLResponse)
     case message(reason: String, data: Data)
     case parseError(reason: Error)
     case mastodonAPIError(error: MastodonError, data: Data)
