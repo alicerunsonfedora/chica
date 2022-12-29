@@ -227,6 +227,8 @@ public class Chica: ObservableObject, CustomStringConvertible {
         case delete = "DELETE"
     }
 
+    public typealias Response<T: Decodable> = Result<T, FetchError>
+
     //  MARK: - PROPERTIES
 
     /// A singleton everybody can access to.
@@ -358,7 +360,7 @@ public class Chica: ObservableObject, CustomStringConvertible {
         _ method: Method,
         for endpoint: Endpoint,
         params: [String: String]? = nil
-    ) async -> Result<T, FetchError> {
+    ) async -> Response<T> {
         let url = Self.API_URL.appendingPathComponent(endpoint.path)
         do {
             let (data, response) = try await self.session.data(for: Self.makeRequest(method, url: url, params: params))
