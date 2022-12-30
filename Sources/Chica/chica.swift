@@ -48,6 +48,11 @@ public class Chica: ObservableObject, CustomStringConvertible {
             public let name: String
             public let website: String
 
+            public init(name: String, website: String) {
+                self.name = name
+                self.website = website
+            }
+
             public static let `default` = RegisteredApplication(
                 name: "Starlight",
                 website: "https://hyperspace.marquiskurt.net"
