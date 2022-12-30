@@ -249,7 +249,9 @@ public class Chica: ObservableObject, CustomStringConvertible {
     /// The domain (without the prefixes) of the instance.
     static var INSTANCE_DOMAIN: String = Keychain(service: OAuth.keychainService)["starlight_instance_domain"] ?? "mastodon.online"
 
-    static public let API_URL = URL(string: "https://\(INSTANCE_DOMAIN)")!
+    static public var API_URL: URL {
+        return URL(string: "https://\(INSTANCE_DOMAIN)")!
+    }
 
     /// Allows us to decode top-level values of the given type from the given JSON representation.
     private let decoder: JSONDecoder
