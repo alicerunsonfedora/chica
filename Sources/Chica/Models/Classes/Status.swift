@@ -106,6 +106,9 @@ public class Status: Codable {
     /// Have you pinned this status? Only appears if the status is pinnable.
     public let pinned: Bool?
 
+    /// Have you bookmarked this status?
+    public let bookmarked: Bool?
+
     // MARK: - COMPUTED PROPERTIES
 
     private enum CodingKeys: String, CodingKey {
@@ -137,6 +140,7 @@ public class Status: Codable {
         case reblogged
         case favourited
         case pinned
+        case bookmarked
     }
 }
 
