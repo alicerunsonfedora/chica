@@ -11,6 +11,8 @@ import Foundation
 public class Status: Codable {
 
     // MARK: - STORED PROPERTIES
+    /// A universally unique identifier for use in views that require fully stable IDs.
+    public let uuid = UUID()
 
     /// The status' unique identifier.
     // swiftlint:disable:next identifier_name
