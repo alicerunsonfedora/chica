@@ -16,7 +16,7 @@ public class MastodonList: Codable, Identifiable {
     private enum CodingKeys: String, CodingKey {
         case id
         case title
-        case repliesPolicy
+        case repliesPolicy = "replies_policy"
     }
 }
 
