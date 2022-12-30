@@ -140,6 +140,9 @@ public enum Endpoint {
     /// Post a status to the user's profile, or request a status with a given ID.
     case statuses(id: String? = nil)
 
+    /// The user's saved statuses.
+    case bookmarks
+
     // MARK: - ACTIONS
     // Methods pertaining to actions that can be performed on statuses.
 
@@ -211,6 +214,8 @@ public enum Endpoint {
             return "/api/v1/statuses/\(statusId)/unbookmark"
         case .lists:
             return "/api/v1/lists"
+        case .bookmarks:
+            return "/api/v1/bookmarks"
         default: return ""
         }
     }
