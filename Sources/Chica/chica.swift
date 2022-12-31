@@ -185,32 +185,25 @@ public class Chica: ObservableObject, CustomStringConvertible {
 
         /// Continues with the OAuth flow after obtaining the user authorization code from the redirect URI
         public func continueOauthFlow(_ code: String) async {
-
             let keychain = Keychain(service: Chica.OAuth.keychainService)
+            let response: Response<Token> = await Chica.shared.request(.post, for: .token, params: [
+                "client_id": keychain["starlight_client_id"]!,
+                "client_secret": keychain["starlight_client_secret"]!,
+                "redirect_uri": "\(Chica.shared.urlPrefix)://\(URL_SUFFIX)",
+                "grant_type": "authorization_code",
+                "code": code,
+                "scope": scopes.joined(separator: " ")
+            ])
 
-            var token: Token? = nil
-
-            do {
-                //  We now have the user code, so now all we need to do is retrieve our token
-                token = try await Chica.shared.request(.post, for: .token, params:
-                    [
-                        "client_id": keychain["starlight_client_id"]!,
-                        "client_secret": keychain["starlight_client_secret"]!,
-                        "redirect_uri": "\(Chica.shared.urlPrefix)://\(URL_SUFFIX)",
-                        "grant_type": "authorization_code",
-                        "code": code,
-                        "scope": scopes.joined(separator: " ")
-                    ]
-                )
-            } catch {
-                print(error)
+            switch response {
+            case .success(let tokenData):
+                keychain["starlight_acess_token"] = tokenData.accessToken
+                DispatchQueue.main.async {
+                    self.authState = .authenthicated(authToken: tokenData.accessToken)
+                }
+            case .failure(let error):
+                print("Failed to get access token: \(error.localizedDescription)")
             }
-
-            //  We store the token in the keychain
-            keychain["starlight_acess_token"] = token?.accessToken
-
-            //  And, finally, we change the state to use the token we just retrieved.
-            self.authState = .authenthicated(authToken: token!.accessToken)
         }
 
         /// Removes the tokens in the keychain for this app, effectively signing a user out.
